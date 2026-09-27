@@ -3,6 +3,7 @@ import { appStore, setSettings, setUi, useApp } from '../store/studio';
 import { scheduler } from './runtime';
 import { Button } from './common';
 import { exportZip } from '../export';
+import { providerLabel } from '../llm/provider';
 
 const STATUS_PILL: Record<string, string> = {
   idle: 'bg-zinc-800 text-zinc-300',
@@ -62,7 +63,7 @@ export function Header() {
         <div className="flex items-center gap-2 text-xs text-zinc-500">
           <span className={`rounded px-1.5 py-px font-medium ${STATUS_PILL[run.status]}`}>{run.status.replace('_', ' ')}</span>
           <span className="tabular-nums">tick {run.tick}</span>
-          <span>· {settings.provider === 'mock' ? 'mock LLM' : settings.model}</span>
+          <span>· {providerLabel(settings)}</span>
           {run.pauseReason && <span className="truncate text-amber-300/80">· {run.pauseReason}</span>}
         </div>
       </div>

@@ -9,7 +9,35 @@ npm test           # engine rules + full mock runs (generated apps executed unde
 npm run build && npm run e2e -- "A Snake game"   # real-browser smoke test (Playwright)
 ```
 
-With no API key, Studio uses a **deterministic mock LLM**, so the whole loop runs offline. To use Claude, open **Settings → Anthropic Claude** and paste a key. The key lives only in memory: it is never persisted, and reloading the page clears it. Requests go straight from the browser to `api.anthropic.com`.
+With no API key or local model, Studio uses a **deterministic mock LLM**, so the whole loop runs offline. To use Claude, open **Settings → Anthropic Claude** and paste a key. The key lives only in memory: it is never persisted, and reloading the page clears it. Requests go straight from the browser to `api.anthropic.com`.
+
+## Run it on a local model
+
+Studio can run entirely on your machine through [Ollama](https://ollama.com) (or any OpenAI-compatible server: LM Studio, llama.cpp, vLLM).
+
+```bash
+ollama pull qwen3-coder:30b
+ollama serve            # usually already running
+npm run dev             # then Settings → Local · Ollama → Test connection
+```
+
+**Recommended model: `qwen3-coder:30b`.** It is tuned for coding and agentic work, and it is a Mixture-of-Experts model with only ~3B parameters active per token. That makes it fast, which matters because a run makes 30–40 calls. It has a 256K context, fits a 24 GB GPU or a 32 GB Mac (~19 GB download), and is the most common pick for local coding agents. Alternatives:
+
+| Model | Download | Hardware | When |
+| --- | --- | --- | --- |
+| `qwen3-coder:30b` | 19 GB | 24 GB GPU / 32 GB Mac | Default: best speed and quality balance |
+| `qwen3.6:27b` | 17 GB | 24 GB GPU / 32 GB Mac | Stronger reasoning, slower (dense) |
+| `devstral:24b` | 14 GB | 16–24 GB GPU | Mistral's agentic coder |
+| `gpt-oss:20b` | 14 GB | 16 GB RAM/VRAM | Smaller machines |
+
+How the local path works (`src/llm/local.ts`):
+- **Structured output.** Replies are constrained to the agents' JSON schema, generated from the same zod schema used for validation. If a server rejects schema mode, the provider falls back to JSON mode, then to plain text. Validation and the retry still apply either way.
+- **Context window.** Ollama's default context is small and it silently truncates long prompts, so Studio requests `num_ctx` explicitly (32K by default; adjustable in Settings).
+- **Scheduling.** Choosing a local provider switches the scheduler to one agent per tick, since one GPU serves one request at a time.
+- **Stuck agents.** An agent that replies "no action" while it still has work gets one nudged retry. If it still doesn't act, the run pauses and names the stuck agent.
+- **Browser origin.** Ollama accepts browser requests from `localhost` by default. If you serve Studio from another origin, start Ollama with `OLLAMA_ORIGINS=<that origin>`. For LM Studio, enable CORS in its server settings.
+
+Small models (under ~14B) handle the JSON protocol but tend to under-scope work and stall at review, so use one of the models above for full runs. `src/test/local-live.test.ts` runs a live Producer turn against your server: `LOCAL_LLM_URL=http://localhost:11434 LOCAL_LLM_MODEL=qwen3-coder:30b npx vitest run src/test/local-live.test.ts`.
 
 ## How it works
 
@@ -53,6 +81,6 @@ The designer's first reply is also intentionally malformed, to exercise validate
 | `src/agents/` | Role definitions and system prompts, action schemas, context builder |
 | `src/engine/` | Pure board engine: rules, commits, locks, timeline snapshots |
 | `src/scheduler/` | Tick loop, eligibility, retries, budget |
-| `src/llm/` | Provider interface, Anthropic provider, mock provider and templates |
+| `src/llm/` | Provider interface; Anthropic, local (Ollama / OpenAI-compatible) and mock providers |
 | `src/runtime/` | Bundler, preview shim, iframe runner |
 | `src/ui/` | Roster, Board, Channel, Files and diffs, Preview, Inspector, Timeline, Settings |

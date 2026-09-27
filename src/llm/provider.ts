@@ -1,6 +1,7 @@
 import type { Agent, Settings, StudioState } from '../types';
 import { createAnthropicProvider } from './anthropic';
 import { createMockProvider } from './mock';
+import { createOllamaProvider, createOpenAICompatibleProvider } from './local';
 
 export interface LLMMessage {
   role: 'user' | 'assistant';
@@ -40,7 +41,17 @@ export function getProvider(settings: Settings): LLMProvider {
     if (!settings.apiKey) throw new Error('No API key set. Open Settings to add one, or switch to the mock provider.');
     return createAnthropicProvider(settings);
   }
+  if (settings.provider === 'ollama' || settings.provider === 'openai-compatible') {
+    if (!settings.localModel.trim()) throw new Error('No local model selected. Open Settings and pick one.');
+    return settings.provider === 'ollama' ? createOllamaProvider(settings) : createOpenAICompatibleProvider(settings);
+  }
   return createMockProvider(settings);
+}
+
+export function providerLabel(settings: Settings): string {
+  if (settings.provider === 'mock') return 'mock LLM';
+  if (settings.provider === 'anthropic') return settings.model;
+  return `local · ${settings.localModel}`;
 }
 
 export const estimateTokens = (s: string) => Math.ceil(s.length / 4);

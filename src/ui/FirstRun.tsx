@@ -7,6 +7,7 @@ const EXAMPLES = ['A Pomodoro timer', 'A Snake game', 'A habit tracker', 'A plat
 export function FirstRun() {
   const [brief, setBrief] = useState('');
   const provider = useApp((s) => s.settings.provider);
+  const localModel = useApp((s) => s.settings.localModel);
   const submit = (b: string) => {
     if (b.trim()) scheduler.newProject(b.trim());
   };
@@ -49,12 +50,14 @@ export function FirstRun() {
             <>
               Running on the built-in <b className="text-zinc-400">mock LLM</b> — no API key needed.{' '}
               <button type="button" className="underline hover:text-zinc-300" onClick={() => setUi({ settingsOpen: true })}>
-                Add a Claude API key
+                Use Claude or a local model
               </button>{' '}
               to have real models do the work.
             </>
-          ) : (
+          ) : provider === 'anthropic' ? (
             <>Using Claude via your API key (kept in memory only).</>
+          ) : (
+            <>Using a local model: {localModel}. Nothing leaves your machine.</>
           )}
         </p>
       </div>

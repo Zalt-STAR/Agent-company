@@ -189,12 +189,17 @@ export interface RunState {
   busy: boolean;
 }
 
-export type ProviderKind = 'mock' | 'anthropic';
+export type ProviderKind = 'mock' | 'anthropic' | 'ollama' | 'openai-compatible';
 
 export interface Settings {
   provider: ProviderKind;
   apiKey: string;
   model: string;
+  /** Base URL of the local model server (Ollama: http://localhost:11434, LM Studio: http://localhost:1234/v1). */
+  localUrl: string;
+  localModel: string;
+  /** Context window to request from the local server (Ollama num_ctx). */
+  localContext: number;
   effort: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
   engineers: 1 | 2 | 3;
   mode: 'serial' | 'parallel';

@@ -19,6 +19,7 @@ export interface SchedulerDeps {
 
 const MAX_ATTEMPTS = 2; // first try + one retry on invalid JSON / rejected action
 const MEMORY_SIZE = 8;
+const MAX_IDLE_NOOPS = 2;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -37,7 +38,8 @@ function boardKey(s: StudioState) {
 export class Scheduler {
   private loop: Promise<void> | null = null;
   private rr = 0;
-  private noopKeys = new Map<string, string>();
+  /** Consecutive no-op turns per agent on an unchanged board. An agent gets a nudged second try before it is skipped. */
+  private noops = new Map<string, { key: string; count: number }>();
   private previewInflight?: Promise<void>;
   private abort = new AbortController();
   /** Bumped on every new project so in-flight turns from the old one are discarded. */
@@ -73,7 +75,7 @@ export class Scheduler {
     const tx = new Tx(fresh);
     tx.message('user', brief.trim(), ['producer']);
     this.store.setState({ ...tx.done(), ui: { ...ui, replayIndex: null, selectedAgentId: 'producer', tab: 'board', selectedCommitId: undefined, selectedFile: undefined } });
-    this.noopKeys.clear();
+    this.noops.clear();
     this.rr = 0;
     if (autoStart) this.start();
   }
@@ -94,6 +96,7 @@ export class Scheduler {
       return;
     }
     this.setRun({ status: 'running', pauseReason: undefined });
+    this.noops.clear();
     this.loop ??= this.runLoop().finally(() => {
       this.loop = null;
     });
@@ -108,6 +111,7 @@ export class Scheduler {
     const { run, brief } = this.s;
     if (!brief || run.busy || this.loop || run.status === 'shipped') return;
     this.setRun({ status: 'paused', pauseReason: undefined });
+    this.noops.clear(); // a manual step gives stuck agents another try
     await this.tick();
   }
 
@@ -158,12 +162,19 @@ export class Scheduler {
         if (!i.act) this.patchAgent(a.id, { status: i.status, activity: i.activity });
       }
       const key = boardKey(s);
-      const ready = s.agents.filter((a) => intents.get(a.id)!.act && this.noopKeys.get(a.id) !== key);
+      const ready = s.agents.filter((a) => {
+        const n = this.noops.get(a.id);
+        return intents.get(a.id)!.act && !(n && n.key === key && n.count >= MAX_IDLE_NOOPS);
+      });
 
       if (!ready.length) {
         if (s.questions.some((q) => !q.answer)) this.setRun({ status: 'waiting_user', pauseReason: 'Waiting for your answer' });
         else if (s.run.status !== 'shipped') {
-          this.setRun({ status: 'paused', pauseReason: 'The team is idle — nothing on the board can move. Inspect the agents or give a new brief.' });
+          const stuck = s.agents.filter((a) => intents.get(a.id)!.act);
+          const reason = stuck.length
+            ? `${stuck.map((a) => `${a.name} (${a.title})`).join(', ')} kept taking no action on: ${stuck.map((a) => intents.get(a.id)!.activity).join('; ')}. Message them in the channel, Step to retry, or try a stronger model.`
+            : 'The team is idle — nothing on the board can move. Inspect the agents or give a new brief.';
+          this.setRun({ status: 'paused', pauseReason: reason });
         }
         return;
       }
@@ -237,7 +248,13 @@ export class Scheduler {
 
     const ctxState = this.s;
     const agent = ctxState.agents.find((a) => a.id === agentId)!;
-    const { system, user } = buildContext(ctxState, agent);
+    const built = buildContext(ctxState, agent);
+    const { system } = built;
+    const prior = this.noops.get(agentId);
+    const user =
+      prior && prior.key === boardKey(ctxState)
+        ? `${built.user}\n\nReminder: your last turn took no action, but you still have work: ${intent.activity}. Take the action that moves it forward unless you are truly blocked.`
+        : built.user;
     const messages: LLMMessage[] = [{ role: 'user', content: user }];
     const readUpTo = ctxState.nextMessage - 1;
 
@@ -311,8 +328,11 @@ export class Scheduler {
     }));
     this.setRun({ turnsUsed: this.s.run.turnsUsed + 1 });
 
-    if (!action || action.type === 'noop') this.noopKeys.set(agentId, boardKey(this.s));
-    else this.noopKeys.clear();
+    if (!action || action.type === 'noop') {
+      const key = boardKey(this.s);
+      const n = this.noops.get(agentId);
+      this.noops.set(agentId, { key, count: n && n.key === key ? n.count + 1 : 1 });
+    } else this.noops.clear();
 
     if (agent.role === 'producer' && action) {
       this.store.setState((s) => ({ questions: s.questions.map((q) => (q.answer ? { ...q, consumed: true } : q)) }));
