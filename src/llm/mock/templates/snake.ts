@@ -1,0 +1,75 @@
+import type { ProjectTemplate } from './types';
+import { splitGlob } from './types';
+
+const raw = import.meta.glob('./snake/**/*', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+export const snake: ProjectTemplate = {
+  id: 'snake',
+  match: /snake/i,
+  ...splitGlob(raw, 'snake'),
+  spec: {
+    title: 'Snake',
+    summary: 'Classic grid Snake on a canvas: steer, eat to grow, avoid walls and yourself. Reach length 25 to win.',
+    kind: 'game',
+    stack: 'vanilla',
+    features: ['20×20 grid, fixed-step loop', 'Arrow keys / WASD + swipe input with turn buffering', 'Food spawns on free cells; score and best', 'Lose on wall or self collision, win at length 25, restart'],
+    outOfScope: ['Levels and obstacles', 'Sound', 'Leaderboards'],
+    templateId: 'snake',
+  },
+  design: {
+    summary: 'Neon-on-midnight arcade look. Green snake, pink-red food, subtle checkerboard for readability.',
+    screens: ['Title overlay (Start)', 'Playfield with score HUD', 'Game over overlay', 'Win overlay'],
+    flow: ['Title overlay → Enter/Start', 'Play until collision or length 25', 'Overlay shows result → Play again restarts instantly'],
+    palette: { bg: '#020617', board: '#0f172a', grid: '#132036', text: '#e2e8f0', muted: '#64748b', snake: '#4ade80', head: '#bbf7d0', food: '#f43f5e' },
+    typography: 'Trebuchet MS / system sans. Title 22px uppercase tracking 2px; overlay heading 28px; HUD 16px tabular numerals.',
+    spacing: '8 / 16 / 24px; 12px board radius; pill buttons.',
+    coreLoop: 'Every 110ms: read buffered direction → move head → eat? grow + respawn food → check collisions and win.',
+    controls: 'Arrow keys or WASD to steer (no instant reversal), swipe on touch; Enter/Space starts and restarts.',
+    artDirection: 'Rounded cells with 1px gutter, brighter head segment, round food. No sprites.',
+  },
+  tickets: [
+    {
+      key: 'scaffold',
+      title: 'Scaffold canvas, HUD & game loop',
+      description: 'index.html with canvas, HUD and overlay; styles from tokens; main.js with fixed-step loop and state machine (ready/playing/over/won). Other modules stubbed.',
+      acceptance: ['Canvas and HUD render', 'Fixed-step loop runs via requestAnimationFrame', 'Overlay shows Start', 'No console errors'],
+      priority: 1,
+      files: ['index.html', 'src/styles.css', 'src/config.js', 'src/main.js', 'src/snake.js', 'src/input.js', 'src/food.js', 'src/render.js', 'src/rules.js'],
+      stubs: ['src/snake.js', 'src/input.js', 'src/food.js', 'src/render.js', 'src/rules.js'],
+      dependsOn: [],
+      commitNote: 'Scaffold canvas, HUD, overlay and fixed-step loop',
+    },
+    {
+      key: 'movement',
+      title: 'Snake movement & input',
+      description: 'Snake body model with move/grow/self-collision, and buffered keyboard + swipe input that forbids instant reversal.',
+      acceptance: ['Snake moves one cell per tick', 'Arrows/WASD steer; reversing is ignored', 'Up to 3 turns are buffered'],
+      priority: 1,
+      files: ['src/snake.js', 'src/input.js'],
+      dependsOn: ['scaffold'],
+      commitNote: 'Add snake body model and buffered input',
+      flaws: [{ kind: 'debugLog', path: 'src/input.js', anchor: 'const dir = KEYS[e.key];', line: "    console.log('key', e.key, dir);" }],
+    },
+    {
+      key: 'food',
+      title: 'Food, scoring & rendering',
+      description: 'Spawn food on free cells, draw board/snake/food per DESIGN.md.',
+      acceptance: ['Food never spawns on the snake', 'Eating grows the snake and increments score', 'Board draws with design tokens', 'No console errors'],
+      priority: 1,
+      files: ['src/food.js', 'src/render.js'],
+      dependsOn: ['scaffold'],
+      commitNote: 'Spawn food and render board, snake and food',
+      flaws: [{ kind: 'bug', path: 'src/render.js', find: 'ctx.fillStyle = COLORS.food;', replace: 'ctx.fillStyle = COLOURS.food;' }],
+    },
+    {
+      key: 'rules',
+      title: 'Win/lose states & restart',
+      description: 'Detect wall and self collisions (lose) and length 25 (win); overlay offers restart.',
+      acceptance: ['Hitting a wall or yourself ends the game', 'Reaching length 25 shows the win overlay', 'Enter/Play again restarts'],
+      priority: 2,
+      files: ['src/rules.js'],
+      dependsOn: ['scaffold'],
+      commitNote: 'Add collision, win condition and restart',
+    },
+  ],
+};

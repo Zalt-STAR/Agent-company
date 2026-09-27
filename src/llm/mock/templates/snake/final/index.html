@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snake</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hud">
+        <h1>Snake</h1>
+        <div>Score <b id="score">0</b></div>
+        <div>Best <b id="best">0</b></div>
+      </header>
+      <div class="stage">
+        <canvas id="board" width="400" height="400"></canvas>
+        <div id="overlay" class="overlay">
+          <h2 id="overlay-title">Snake</h2>
+          <p id="overlay-text"></p>
+          <button id="overlay-action">Start</button>
+        </div>
+      </div>
+      <p class="hint">Arrows / WASD to steer · Enter to start</p>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

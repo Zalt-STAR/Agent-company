@@ -1,0 +1,75 @@
+:root {
+  --bg: #1c1917;
+  --surface: #292524;
+  --text: #fafaf9;
+  --muted: #a8a29e;
+  --work: #f97316;
+  --short: #22c55e;
+  --long: #38bdf8;
+  --accent: var(--work);
+  --radius: 16px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+  font-family: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--text);
+}
+#app[data-mode='short'] { --accent: var(--short); }
+#app[data-mode='long'] { --accent: var(--long); }
+.card {
+  width: min(360px, 92vw);
+  padding: var(--space-4);
+  background: var(--surface);
+  border-radius: var(--radius);
+  text-align: center;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.35);
+}
+.muted { color: var(--muted); }
+.tabs { display: flex; gap: var(--space-1); justify-content: center; margin-bottom: var(--space-4); }
+.tab {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: var(--space-1) var(--space-3);
+  font-size: 13px;
+  cursor: pointer;
+}
+.tab.active { color: var(--text); border-color: var(--accent); }
+.dial { position: relative; width: 220px; height: 220px; margin: 0 auto var(--space-4); }
+.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 6; }
+.ring .track { stroke: rgb(255 255 255 / 0.08); }
+.ring .progress { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 0.4s linear, stroke 0.3s; }
+.time {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 48px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+.controls { display: flex; gap: var(--space-2); justify-content: center; }
+.controls button {
+  border: 0;
+  border-radius: 10px;
+  padding: var(--space-2) var(--space-3);
+  background: rgb(255 255 255 / 0.08);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+}
+.controls button.primary { background: var(--accent); color: #111; font-weight: 700; min-width: 96px; }
+.stats { margin-top: var(--space-4); color: var(--muted); font-size: 13px; }

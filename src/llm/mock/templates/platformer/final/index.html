@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hop Hills — Platformer</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hud">
+        <h1>Hop Hills</h1>
+        <span>🪙 <b id="coins">0/0</b></span>
+        <span>⏱ <b id="time">0.0</b>s</span>
+      </header>
+      <div class="stage">
+        <canvas id="game" width="640" height="448"></canvas>
+        <div id="overlay" class="overlay">
+          <h2 id="overlay-title">Hop Hills</h2>
+          <p id="overlay-text"></p>
+          <button id="overlay-action">Play</button>
+        </div>
+      </div>
+      <p class="hint">← → / A D to move · ↑ / W / Space to jump · Enter to start</p>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
