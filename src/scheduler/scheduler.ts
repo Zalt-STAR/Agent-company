@@ -78,6 +78,14 @@ export class Scheduler {
     if (autoStart) this.start();
   }
 
+  /** Drop the current project and return to the first-run screen. */
+  closeProject() {
+    this.abort.abort();
+    this.abort = new AbortController();
+    this.epoch++;
+    this.store.setState({ ...initialStudio('', this.s.settings.engineers) });
+  }
+
   start() {
     const { run, brief } = this.s;
     if (!brief || run.status === 'shipped') return;
@@ -112,6 +120,15 @@ export class Scheduler {
     tx.event('note', `You answered: ${answer}`, 'user');
     this.store.setState(tx.done());
     if (this.s.run.status === 'waiting_user') this.start();
+  }
+
+  /** Post a message from the user to the team channel. Defaults to mentioning the Producer. */
+  postUserMessage(text: string) {
+    const clean = text.trim();
+    if (!clean || !this.s.brief) return;
+    const tx = new Tx(this.s);
+    tx.message('user', clean, /@[a-z0-9-]+/i.test(clean) ? [] : ['producer']);
+    this.store.setState(tx.done());
   }
 
   /** Resolves when the loop stops (paused, shipped, waiting on the user, or budget hit). */
