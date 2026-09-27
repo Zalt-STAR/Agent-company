@@ -16,10 +16,11 @@ With no API key or local model, Studio uses a **deterministic mock LLM**, so the
 Studio can run entirely on your machine through [Ollama](https://ollama.com) (or any OpenAI-compatible server: LM Studio, llama.cpp, vLLM).
 
 ```bash
-ollama pull qwen3-coder:30b
-ollama serve            # usually already running
+npm run setup:local     # installs Ollama if needed, picks the best model for your hardware, pulls it, starts the server
 npm run dev             # then Settings → Local · Ollama → Test connection
 ```
+
+Or by hand: `ollama pull qwen3-coder:30b`. On Windows, install Ollama from ollama.com/download and run that pull command. `MODEL=<tag> npm run setup:local` forces a specific model; `DRY_RUN=1` shows what the script would do.
 
 **Recommended model: `qwen3-coder:30b`.** It is tuned for coding and agentic work, and it is a Mixture-of-Experts model with only ~3B parameters active per token. That makes it fast, which matters because a run makes 30–40 calls. It has a 256K context, fits a 24 GB GPU or a 32 GB Mac (~19 GB download), and is the most common pick for local coding agents. Alternatives:
 
